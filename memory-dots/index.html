@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover">
+    <title>节奏光点 · 记忆闪击</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0d0d1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            touch-action: none;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 28px;
+            border: 2px solid rgba(255, 255, 255, 0.12);
+        }
+        .dot {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 3px solid rgba(255, 255, 255, 0.18);
+            cursor: pointer;
+            transition: all 0.12s ease;
+            position: relative;
+        }
+        .dot.active {
+            background: #ffd93d;
+            box-shadow: 0 0 35px #ffd93d, 0 0 60px rgba(255, 217, 61, 0.5);
+            border-color: #fff;
+            transform: scale(1.1);
+        }
+        .dot.player-click {
+            background: #ffffff;
+            box-shadow: 0 0 20px #ffffff;
+            border-color: #fff;
+            transform: scale(0.95);
+        }
+        .dot.wrong {
+            background: #ff4444 !important;
+            box-shadow: 0 0 30px #ff4444, 0 0 50px rgba(255, 68, 68, 0.8) !important;
+            border-color: #ff8888 !important;
+            animation: shake 0.5s ease !important;
+        }
+        .dot.correct-flash {
+            background: #44ff44 !important;
+            box-shadow: 0 0 25px #44ff44 !important;
+            border-color: #88ff88 !important;
+        }
+        .dot.highlight-wrong {
+            background: #ff0000 !important;
+            box-shadow: 0 0 40px #ff0000, 0 0 80px rgba(255, 0, 0, 0.6) !important;
+            border-color: #ff4444 !important;
+            animation: pulse 0.5s ease 3 !important;
+        }
+        @keyframes shake {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.15) rotate(-5deg); }
+            75% { transform: scale(1.15) rotate(5deg); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+        .hud {
+            display: flex;
+            gap: 16px;
+            margin: 14px 0;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        .hud span {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 8px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 30px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s;
+        }
+        .btn:active {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(0.95);
+        }
+        .message {
+            color: #ffd93d;
+            font-weight: 700;
+            font-size: 1.1rem;
+            min-height: 28px;
+            margin: 6px 0;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(255, 217, 61, 0.3);
+            transition: all 0.3s;
+        }
+        .error-message {
+            position: fixed;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-weight: 900;
+            font-size: 1.5rem;
+            pointer-events: none;
+            z-index: 100;
+            animation: errorPop 1.5s ease-out forwards;
+            box-shadow: 0 10px 30px rgba(255, 0, 0, 0.5);
+        }
+        @keyframes errorPop {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            40% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+        .correct-indicator {
+            position: fixed;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(68, 255, 68, 0.9);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-weight: 900;
+            font-size: 1.5rem;
+            pointer-events: none;
+            z-index: 100;
+            animation: correctPop 1s ease-out forwards;
+            box-shadow: 0 10px 30px rgba(68, 255, 68, 0.5);
+        }
+        @keyframes correctPop {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            30% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            70% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hud">
+        <span>💡 关卡 <span id="levelDisplay">1</span>/10</span>
+        <span>📊 进度 <span id="progressDisplay">0/0</span></span>
+    </div>
+    <div class="message" id="messageBox">准备开始...</div>
+    <div class="grid" id="dotGrid">
+        <div class="dot" data-id="0"></div>
+        <div class="dot" data-id="1"></div>
+        <div class="dot" data-id="2"></div>
+        <div class="dot" data-id="3"></div>
+        <div class="dot" data-id="4"></div>
+        <div class="dot" data-id="5"></div>
+        <div class="dot" data-id="6"></div>
+        <div class="dot" data-id="7"></div>
+        <div class="dot" data-id="8"></div>
+    </div>
+    <button class="btn" id="resetBtn">🔄 重新开始</button>
+
+    <script>
+        (function() {
+            const dots = document.querySelectorAll('.dot');
+            const msgBox = document.getElementById('messageBox');
+            const levelDisplay = document.getElementById('levelDisplay');
+            const progressDisplay = document.getElementById('progressDisplay');
+
+            // 关卡配置：序列长度和闪烁间隔(ms)
+            const levelConfig = [
+                { seqLen: 3, flashInterval: 800 },  // 第1关
+                { seqLen: 3, flashInterval: 700 },  // 第2关
+                { seqLen: 4, flashInterval: 650 },  // 第3关
+                { seqLen: 4, flashInterval: 550 },  // 第4关
+                { seqLen: 5, flashInterval: 480 },  // 第5关
+                { seqLen: 5, flashInterval: 400 },  // 第6关
+                { seqLen: 6, flashInterval: 340 },  // 第7关
+                { seqLen: 7, flashInterval: 280 },  // 第8关
+                { seqLen: 8, flashInterval: 230 },  // 第9关
+                { seqLen: 9, flashInterval: 180 }   // 第10关
+            ];
+
+            let level = 1;
+            let sequence = [];           // 当前关卡的正确序列
+            let playerIndex = 0;        // 玩家下一个应该点击的序号
+            let isShowing = false;      // 正在展示序列
+            let isAccepting = false;    // 正在接受玩家输入
+            let isCountdown = false;    // 正在倒计时
+            let gameOver = false;
+            let flashTimer = null;
+
+            // 更新UI显示
+            function updateUI() {
+                levelDisplay.textContent = level;
+                const config = levelConfig[Math.min(level - 1, 9)];
+                progressDisplay.textContent = '0/' + config.seqLen;
+            }
+
+            // 清除所有光点的状态
+            function clearAllDots() {
+                dots.forEach(d => {
+                    d.classList.remove('active', 'player-click', 'wrong', 'correct-flash', 'highlight-wrong');
+                });
+            }
+
+            // 显示错误提示
+            function showErrorFeedback(wrongDotId, correctDotId) {
+                // 错误光点动画
+                const wrongDot = dots[wrongDotId];
+                wrongDot.classList.add('wrong');
+                
+                // 显示正确光点
+                const correctDot = dots[correctDotId];
+                correctDot.classList.add('highlight-wrong');
+                
+                // 屏幕中央错误提示
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message';
+                errorMsg.textContent = '❌ 错误！重新开始';
+                document.body.appendChild(errorMsg);
+                
+                // 震动反馈
+                if (navigator.vibrate) {
+                    navigator.vibrate([100, 50, 100, 50, 200]);
+                }
+                
+                // 清除提示和动画
+                setTimeout(() => {
+                    errorMsg.remove();
+                    clearAllDots();
+                }, 1500);
+            }
+
+            // 显示倒计时数字 (3秒倒计时)
+            function showCountdown(callback) {
+                isCountdown = true;
+                isAccepting = false;
+                isShowing = false;
+                clearAllDots();
+                clearTimeout(flashTimer);
+                msgBox.textContent = '准备记忆...';
+
+                // 创建倒计时容器
+                const countdownEl = document.createElement('div');
+                countdownEl.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    font-size: 5rem;
+                    font-weight: 900;
+                    color: #ffd93d;
+                    text-shadow: 0 0 40px rgba(255, 217, 61, 0.8);
+                    pointer-events: none;
+                    z-index: 100;
+                `;
+                document.body.appendChild(countdownEl);
+
+                let count = 3;
+                countdownEl.textContent = count;
+
+                const countInterval = setInterval(() => {
+                    count--;
+                    if (count <= 0) {
+                        clearInterval(countInterval);
+                        countdownEl.remove();
+                        isCountdown = false;
+                        msgBox.textContent = '👀 记住顺序！';
+                        if (callback) callback();
+                        return;
+                    }
+                    // 更新数字并重新触发动画
+                    countdownEl.textContent = count;
+                    countdownEl.style.animation = 'none';
+                    countdownEl.offsetHeight; // 触发回流
+                    countdownEl.style.animation = 'popIn 0.5s ease-out';
+                }, 1000);
+            }
+
+            // 展示序列动画
+            function showSequence() {
+                clearAllDots();
+                clearTimeout(flashTimer);
+                isShowing = true;
+                isAccepting = false;
+                playerIndex = 0;
+
+                // 生成当前关卡的随机序列
+                const config = levelConfig[Math.min(level - 1, 9)];
+                sequence = [];
+                for (let i = 0; i < config.seqLen; i++) {
+                    let next;
+                    do {
+                        next = Math.floor(Math.random() * 9);
+                    } while (i > 0 && next === sequence[i - 1]);
+                    sequence.push(next);
+                }
+
+                console.log('关卡', level, '正确序列:', sequence.join(','));
+
+                updateUI();
+
+                // 逐个闪烁
+                let step = 0;
+                function flashNext() {
+                    if (step > 0) {
+                        dots[sequence[step - 1]].classList.remove('active');
+                    }
+
+                    if (step >= sequence.length) {
+                        // 所有光点闪烁完毕
+                        isShowing = false;
+                        isAccepting = true;
+                        playerIndex = 0;
+                        msgBox.textContent = '👆 按顺序点击！';
+                        flashTimer = null;
+                        updateProgress();
+                        return;
+                    }
+
+                    dots[sequence[step]].classList.add('active');
+                    step++;
+                    flashTimer = setTimeout(flashNext, config.flashInterval);
+                }
+
+                flashNext();
+            }
+
+            // 更新进度显示
+            function updateProgress() {
+                const config = levelConfig[Math.min(level - 1, 9)];
+                progressDisplay.textContent = playerIndex + '/' + config.seqLen;
+            }
+
+            // 处理玩家点击
+            function handleDotClick(dotId) {
+                if (!isAccepting || isShowing || isCountdown || gameOver) {
+                    return;
+                }
+
+                if (dotId === sequence[playerIndex]) {
+                    // 正确
+                    dots[dotId].classList.add('correct-flash');
+                    setTimeout(() => dots[dotId].classList.remove('correct-flash'), 250);
+
+                    playerIndex++;
+                    updateProgress();
+
+                    // 完成整个序列
+                    if (playerIndex >= sequence.length) {
+                        isAccepting = false;
+                        msgBox.textContent = '✅ 正确！';
+
+                        // 显示成功提示
+                        const successMsg = document.createElement('div');
+                        successMsg.className = 'correct-indicator';
+                        successMsg.textContent = '✅ 完美！';
+                        document.body.appendChild(successMsg);
+                        setTimeout(() => successMsg.remove(), 1000);
+
+                        if (level >= 10) {
+                            // 全部通关
+                            gameOver = true;
+                            msgBox.textContent = '🏆 全部通关！你是记忆大师！';
+                            clearAllDots();
+                            progressDisplay.textContent = '完成';
+                        } else {
+                            // 进入下一关
+                            level++;
+                            updateUI();
+                            msgBox.textContent = '✅ 正确！准备下一关...';
+                            setTimeout(() => {
+                                showCountdown(() => {
+                                    showSequence();
+                                });
+                            }, 1200);
+                        }
+                    }
+                } else {
+                    // 错误
+                    isAccepting = false;
+                    const wrongDotId = dotId;
+                    const correctDotId = sequence[playerIndex];
+                    
+                    msgBox.textContent = '❌ 顺序错了！显示正确答案...';
+                    
+                    // 显示错误反馈
+                    showErrorFeedback(wrongDotId, correctDotId);
+                    
+                    // 暂停后重新开始
+                    setTimeout(() => {
+                        msgBox.textContent = '3秒后重新开始...';
+                        showCountdown(() => {
+                            showSequence();
+                        });
+                    }, 1500);
+                }
+            }
+
+            // 绑定点击事件
+            dots.forEach(dot => {
+                dot.addEventListener('click', function(e) {
+                    const dotId = parseInt(this.dataset.id);
+                    if (isAccepting && !gameOver && !isCountdown) {
+                        this.classList.add('player-click');
+                        setTimeout(() => this.classList.remove('player-click'), 120);
+                    }
+                    handleDotClick(dotId);
+                });
+            });
+
+            // 重置游戏
+            function resetGame() {
+                clearTimeout(flashTimer);
+                clearAllDots();
+                level = 1;
+                sequence = [];
+                playerIndex = 0;
+                isShowing = false;
+                isAccepting = false;
+                isCountdown = false;
+                gameOver = false;
+                updateUI();
+                msgBox.textContent = '准备开始...';
+
+                showCountdown(() => {
+                    showSequence();
+                });
+            }
+
+            document.getElementById('resetBtn').addEventListener('click', resetGame);
+
+            // 启动游戏
+            resetGame();
+        })();
+    </script>
+</body>
+</html>
