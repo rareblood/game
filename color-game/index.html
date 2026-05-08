@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=yes, viewport-fit=cover">
+  <title>辨色达人 · 色块挑战</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: linear-gradient(145deg, #1a1e2b 0%, #2a2f3f 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+      padding: 16px;
+      margin: 0;
+      touch-action: manipulation;
+    }
+    .game-container {
+      width: 100%;
+      max-width: 500px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 48px;
+      padding: 24px 20px 32px;
+      box-shadow: 0 30px 50px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #eef5ff;
+      padding: 0 8px;
+    }
+    .level-badge {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 40px;
+      padding: 8px 20px;
+      font-weight: 600;
+      font-size: 1.2rem;
+      letter-spacing: 1px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .score-area {
+      background: #f7c948;
+      color: #1e1e2a;
+      border-radius: 30px;
+      padding: 8px 22px;
+      font-weight: 700;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 6px 0 #b68b2c, 0 8px 18px rgba(0,0,0,0.4);
+      border: 1px solid #ffe49c;
+    }
+    .grid {
+      display: grid;
+      gap: 10px;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 36px;
+      padding: 14px;
+      backdrop-filter: blur(12px);
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.6), 0 12px 28px rgba(0,0,0,0.5);
+      margin: 4px 0;
+      transition: all 0.2s ease;
+    }
+    .cell {
+      border-radius: 16px;
+      cursor: pointer;
+      transition: 0.1s ease;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(255,255,255,0.2);
+      will-change: transform;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cell:active {
+      transform: scale(0.94);
+      filter: brightness(1.15);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+    .message-row {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 48px;
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: #d9e9ff;
+      text-shadow: 0 2px 4px black;
+      letter-spacing: 0.5px;
+    }
+    .btn-group {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 14px 28px;
+      border-radius: 40px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.4);
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.02) 100%);
+      letter-spacing: 1px;
+      flex: 1;
+      min-width: 110px;
+      text-align: center;
+      touch-action: manipulation;
+    }
+    .btn-primary {
+      background: #4f7eff;
+      border: 1px solid #a3c2ff;
+      box-shadow: 0 6px 0 #2d3f8c, 0 10px 20px rgba(0,0,0,0.5);
+      color: white;
+      font-weight: 700;
+    }
+    .btn-primary:active {
+      transform: translateY(2px);
+      box-shadow: 0 3px 0 #1f2c5c, 0 8px 16px rgba(0,0,0,0.5);
+    }
+    .btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+    }
+    .win-overlay {
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(12px);
+      border-radius: 36px;
+      padding: 20px;
+      color: gold;
+      font-weight: bold;
+      font-size: 1.6rem;
+      text-align: center;
+    }
+    @media (max-width: 400px) {
+      .game-container {
+        padding: 16px 14px 24px;
+      }
+      .btn {
+        padding: 12px 16px;
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="game-container">
+  <div class="header">
+    <div class="level-badge" id="levelDisplay">第 1 / 10 关</div>
+    <div class="score-area">
+      <span>⭐</span> <span id="scoreDisplay">0</span>
+    </div>
+  </div>
+
+  <!-- 色块网格容器 -->
+  <div class="grid" id="colorGrid" style="grid-template-columns: repeat(2, 1fr);"></div>
+
+  <div class="message-row" id="messageBox">找出不同颜色的色块</div>
+
+  <div class="btn-group">
+    <button class="btn" id="resetBtn">🔄 重玩</button>
+    <button class="btn btn-primary" id="nextBtn" disabled>▶ 下一关</button>
+  </div>
+  <div style="color:#aaa; font-size:0.8rem; margin-top:4px;">点击与众不同的色块过关</div>
+</div>
+
+<script>
+  (function() {
+    // --- 游戏核心配置 ---
+    const TOTAL_LEVELS = 10;
+    
+    // 当前状态
+    let currentLevel = 1;            // 1~10
+    let score = 0;
+    let gridSize = 2;              // 每行列数 (2x2 起步)
+    let baseColor = [100, 150, 220]; // 基础RGB，随关卡变化
+    let differentIndex = -1;       // 不同色块在网格中的索引
+    let gameCompleted = false;     // 是否通关
+    let levelLocked = false;      // 防止连点
+
+    // DOM 元素
+    const gridEl = document.getElementById('colorGrid');
+    const levelDisplayEl = document.getElementById('levelDisplay');
+    const scoreDisplayEl = document.getElementById('scoreDisplay');
+    const messageBoxEl = document.getElementById('messageBox');
+    const nextBtn = document.getElementById('nextBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // --- 工具函数：生成随机整数 ---
+    const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+    // --- 根据关卡计算难度参数 ---
+    function getLevelConfig(level) {
+      // 网格大小：2x2 (第1-2关), 3x3 (3-5), 4x4 (6-8), 5x5 (9-10)
+      if (level <= 2) return { size: 2, colorShift: 35 };
+      if (level <= 5) return { size: 3, colorShift: 28 };
+      if (level <= 8) return { size: 4, colorShift: 22 };
+      return { size: 5, colorShift: 16 }; // 9-10关更细微
+    }
+
+    // --- 根据关卡生成基础色 (让每关色调不同，更有趣) ---
+    function generateBaseColor(level) {
+      // 色调循环变化，保持明亮饱和
+      const hue = (level * 37 + 180) % 360; 
+      // 饱和度60-80%，亮度55-75% 保证鲜艳且可辨
+      const saturation = 0.65 + (level % 3) * 0.08;
+      const lightness = 0.58 + (level % 4) * 0.04;
+      
+      // HSL 转 RGB 简化版
+      const c = (1 - Math.abs(2 * lightness - 1)) * saturation;
+      const x = c * (1 - Math.abs((hue / 60) % 2 - 1));
+      const m = lightness - c / 2;
+      let r, g, b;
+      if (hue < 60) { r = c; g = x; b = 0; }
+      else if (hue < 120) { r = x; g = c; b = 0; }
+      else if (hue < 180) { r = 0; g = c; b = x; }
+      else if (hue < 240) { r = 0; g = x; b = c; }
+      else if (hue < 300) { r = x; g = 0; b = c; }
+      else { r = c; g = 0; b = x; }
+      
+      return [
+        Math.floor((r + m) * 255),
+        Math.floor((g + m) * 255),
+        Math.floor((b + m) * 255)
+      ];
+    }
+
+    // --- 计算“不同色块”的颜色 (基于基础色微调) ---
+    function getDifferentColor(base, shiftAmount) {
+      // 随机选择一个通道进行偏移，并保证在0-255范围内
+      let channel = rand(0, 2); // 0:R,1:G,2:B
+      let newColor = [...base];
+      // 偏移方向随机，但保证差异明显
+      let delta = rand(shiftAmount - 2, shiftAmount + 4);
+      if (delta < 8) delta = 8; // 最小偏移保证可见
+      // 随机增加或减少
+      if (Math.random() < 0.5) delta = -delta;
+      
+      newColor[channel] = Math.min(255, Math.max(0, base[channel] + delta));
+      
+      // 额外安全检查：如果新颜色与基础色太接近(因为边界裁剪)，再尝试另一个通道
+      if (Math.abs(newColor[channel] - base[channel]) < 6) {
+        let altChannel = (channel + 1) % 3;
+        let altDelta = rand(shiftAmount, shiftAmount + 6);
+        if (Math.random() < 0.5) altDelta = -altDelta;
+        newColor[altChannel] = Math.min(255, Math.max(0, base[altChannel] + altDelta));
+      }
+      return newColor;
+    }
+
+    // --- 渲染网格 ---
+    function renderGrid() {
+      if (gameCompleted) return;
+      
+      const config = getLevelConfig(currentLevel);
+      gridSize = config.size;
+      const totalCells = gridSize * gridSize;
+      
+      // 生成当前关卡基础色
+      baseColor = generateBaseColor(currentLevel);
+      const shift = config.colorShift;
+      
+      // 随机选择不同色块的位置
+      differentIndex = rand(0, totalCells - 1);
+      
+      // 计算不同色块的颜色
+      const differentColor = getDifferentColor(baseColor, shift);
+      
+      // 设置网格CSS
+      gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+      
+      // 清空并重建cell
+      gridEl.innerHTML = '';
+      for (let i = 0; i < totalCells; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        // 决定颜色
+        const isDifferent = (i === differentIndex);
+        const color = isDifferent ? differentColor : baseColor;
+        cell.style.backgroundColor = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+        
+        // 添加点击事件
+        cell.addEventListener('click', (e) => handleCellClick(i, isDifferent, e));
+        
+        gridEl.appendChild(cell);
+      }
+      
+      // 更新UI文字
+      updateUI();
+      
+      // 解锁下一关按钮状态 (如果之前因通关锁定，特殊处理)
+      if (currentLevel === TOTAL_LEVELS && gameCompleted) {
+        nextBtn.disabled = true;
+      } else {
+        nextBtn.disabled = true; // 通关后才能启用
+      }
+      
+      levelLocked = false;
+    }
+
+    // --- 处理色块点击 ---
+    function handleCellClick(index, isDifferent, event) {
+      if (gameCompleted) {
+        messageBoxEl.textContent = '🎉 你已通关！点击“重玩”继续挑战';
+        return;
+      }
+      if (levelLocked) {
+        messageBoxEl.textContent = '⏳ 你已经找到啦！请进入下一关';
+        return;
+      }
+      
+      if (isDifferent) {
+        // 正确！
+        levelLocked = true;
+        score += 1;
+        messageBoxEl.textContent = '✅ 辨别正确！ +1 分';
+        
+        // 高亮正确色块（短暂视觉反馈）
+        const cells = document.querySelectorAll('.cell');
+        if (cells[index]) {
+          cells[index].style.boxShadow = '0 0 20px 6px #ffe484, inset 0 0 12px white';
+          cells[index].style.transform = 'scale(1.02)';
+        }
+        
+        // 更新分数显示
+        scoreDisplayEl.textContent = score;
+        
+        // 判断是否完成所有关卡
+        if (currentLevel === TOTAL_LEVELS) {
+          // 通关！
+          gameCompleted = true;
+          messageBoxEl.textContent = '🏆 恭喜！你已完成全部10关！太厉害了！';
+          nextBtn.disabled = true; // 没有下一关了
+          levelDisplayEl.textContent = `通关！ ${TOTAL_LEVELS}/${TOTAL_LEVELS}`;
+        } else {
+          // 启用下一关按钮
+          nextBtn.disabled = false;
+        }
+      } else {
+        // 点错：轻微惩罚提示，但不扣分（保持友好）
+        messageBoxEl.textContent = '❌ 这个是相同颜色，再仔细观察～';
+        // 闪烁错误色块
+        const cells = document.querySelectorAll('.cell');
+        if (cells[index]) {
+          cells[index].style.transition = '0.1s';
+          cells[index].style.backgroundColor = '#4a3b4f';
+          setTimeout(() => {
+            if (cells[index] && !levelLocked) {
+              // 恢复原色（需要重新从基础色获取，简单处理：重新渲染网格避免状态错乱，但为性能只恢复颜色）
+              // 安全方式：根据索引重新赋予颜色
+              const config = getLevelConfig(currentLevel);
+              const diffColor = getDifferentColor(baseColor, config.colorShift);
+              const isDiffCell = (index === differentIndex);
+              cells[index].style.backgroundColor = isDiffCell ? 
+                `rgb(${diffColor[0]}, ${diffColor[1]}, ${diffColor[2]})` : 
+                `rgb(${baseColor[0]}, ${baseColor[1]}, ${baseColor[2]})`;
+            }
+          }, 180);
+        }
+      }
+    }
+
+    // --- 更新顶部文字 ---
+    function updateUI() {
+      levelDisplayEl.textContent = `第 ${currentLevel} / ${TOTAL_LEVELS} 关`;
+      scoreDisplayEl.textContent = score;
+      if (!gameCompleted && !levelLocked) {
+        messageBoxEl.textContent = '找出不同颜色的色块';
+      }
+    }
+
+    // --- 前往下一关 ---
+    function goToNextLevel() {
+      if (gameCompleted) return;
+      if (currentLevel < TOTAL_LEVELS && !nextBtn.disabled) {
+        currentLevel++;
+        // 重置关卡锁
+        levelLocked = false;
+        gameCompleted = false;
+        renderGrid();
+        messageBoxEl.textContent = '找出不同颜色的色块';
+      } else if (currentLevel === TOTAL_LEVELS && gameCompleted) {
+        // 已经通关，不能继续
+        nextBtn.disabled = true;
+      }
+    }
+
+    // --- 重置整个游戏 ---
+    function resetGame() {
+      currentLevel = 1;
+      score = 0;
+      gameCompleted = false;
+      levelLocked = false;
+      nextBtn.disabled = true;
+      
+      // 重新生成第一关
+      renderGrid();
+      messageBoxEl.textContent = '找出不同颜色的色块';
+      scoreDisplayEl.textContent = '0';
+    }
+
+    // --- 事件绑定 ---
+    nextBtn.addEventListener('click', goToNextLevel);
+    
+    resetBtn.addEventListener('click', resetGame);
+
+    // 触摸设备优化：阻止双击缩放干扰 (不影响按钮)
+    gridEl.addEventListener('touchstart', (e) => {
+      // 仅为了提升响应，不阻止默认
+    }, { passive: true });
+
+    // 初始化游戏
+    function initGame() {
+      resetGame(); // 直接调用重置开始第一关
+    }
+
+    initGame();
+
+    // 适配今日头条环境：可能嵌入iframe，保证点击正常
+    window.addEventListener('load', () => {
+      // 确保网格尺寸正确
+    });
+
+  })();
+</script>
+</body>
+</html>
