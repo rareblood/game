@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=yes, viewport-fit=cover">
+    <title>文曲星·成语挑战</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #d9c8a4;
+            background-image: radial-gradient(circle at 20% 30%, rgba(255, 250, 240, 0.6) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(230, 210, 170, 0.4) 0%, transparent 50%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'KaiTi', '楷体', 'STKaiti', '华文楷体', 'PingFang SC', 'Microsoft YaHei', serif;
+            padding: 12px;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+        .game-wrapper {
+            width: 100%;
+            max-width: 460px;
+            background: rgba(250, 245, 235, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 42px 42px 32px 32px;
+            padding: 16px 14px 20px;
+            box-shadow: 0 20px 40px rgba(80, 40, 20, 0.3), inset 0 1px 4px rgba(255, 255, 200, 0.8);
+            border: 2px solid #b89b7b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+        }
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #4a3620;
+            font-weight: bold;
+            padding: 0 4px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .level-box {
+            background: #c9a87c;
+            color: #fff9e6;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.2);
+            border: 1px solid #b39264;
+        }
+        .found-box {
+            background: #a3c9a8;
+            color: #1e3b2c;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 1rem;
+            border: 1px solid #7d9f7a;
+            font-weight: bold;
+        }
+        .hint-box {
+            background: #e8d5b0;
+            color: #4a3620;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            border: 1px solid #c9aa7a;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .grid-container {
+            display: grid;
+            gap: 8px;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: #f3e5cd;
+            border-radius: 28px;
+            padding: 12px;
+            box-shadow: inset 0 0 18px rgba(80, 40, 10, 0.3), 0 8px 18px rgba(0, 0, 0, 0.2);
+            border: 2px solid #c9aa7a;
+            position: relative;
+        }
+        .cell {
+            background: #fffdf5;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #3b2b1a;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15), inset 0 1px 3px white;
+            transition: all 0.12s;
+            cursor: pointer;
+            border: 2px solid #d4b896;
+            position: relative;
+            aspect-ratio: 1 / 1;
+            min-width: 0;
+        }
+        .cell:active {
+            transform: scale(0.93);
+            background: #f0e0c0;
+        }
+        .cell.selected {
+            background: #ffecb0;
+            border-color: #e6a800;
+            box-shadow: 0 0 14px #f90;
+            transform: scale(0.95);
+        }
+        .cell.wrong-shake {
+            animation: shake 0.5s ease;
+            background: #ffcccc;
+            border-color: #ff4444;
+        }
+        .cell.used {
+            background: #d9cdb0;
+            color: #9b8c7a;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+            border-color: #b8a68b;
+            pointer-events: none;
+            opacity: 0.65;
+        }
+        .cell.hint-glow {
+            background: #ffe0b0 !important;
+            border-color: #cc8800 !important;
+            box-shadow: 0 0 18px #ffaa00 !important;
+            animation: pulse 0.8s ease infinite;
+            z-index: 2;
+        }
+        .cell.hint-strong {
+            background: #ffcc00 !important;
+            border-color: #ff8800 !important;
+            box-shadow: 0 0 24px #ff8800 !important;
+            animation: pulseStrong 0.6s ease infinite;
+            z-index: 3;
+            font-size: 2rem !important;
+        }
+        @keyframes shake {
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+            25% {
+                transform: translateX(-6px);
+            }
+            75% {
+                transform: translateX(6px);
+            }
+        }
+        @keyframes pulse {
+            0%,
+            100% {
+                box-shadow: 0 0 12px #ffaa00;
+            }
+            50% {
+                box-shadow: 0 0 24px #ff8800;
+            }
+        }
+        @keyframes pulseStrong {
+            0%,
+            100% {
+                box-shadow: 0 0 18px #ff8800;
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 32px #ff6600;
+                transform: scale(1.05);
+            }
+        }
+        .message-area {
+            width: 100%;
+            text-align: center;
+            font-weight: bold;
+            color: #5a3e2b;
+            min-height: 24px;
+            font-size: 1rem;
+            padding: 4px;
+            line-height: 1.5;
+        }
+        .btns {
+            display: flex;
+            width: 100%;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: #efdcc5;
+            border: 2px solid #b39264;
+            color: #4a3620;
+            padding: 10px 16px;
+            border-radius: 32px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+        .btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            background: #dac29e;
+        }
+        .btn.primary {
+            background: #c28b5e;
+            color: #fff;
+            border-color: #855e3a;
+        }
+        .btn:disabled {
+            opacity: 0.45;
+            pointer-events: none;
+        }
+        .big-message {
+            position: fixed;
+            top: 35%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #4a3620;
+            pointer-events: none;
+            z-index: 200;
+            text-align: center;
+            animation: bigPop 1.5s ease-out forwards;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+        }
+        @keyframes bigPop {
+            0% {
+                transform: translate(-50%, -50%) scale(0.3);
+                opacity: 0;
+            }
+            30% {
+                transform: translate(-50%, -50%) scale(1.1);
+                opacity: 1;
+            }
+            70% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0;
+            }
+        }
+        .stamp-effect {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg) scale(3);
+            font-size: 4rem;
+            font-weight: 900;
+            color: rgba(200, 50, 50, 0.85);
+            pointer-events: none;
+            z-index: 200;
+            animation: stampDown 0.8s ease-out forwards;
+        }
+        @keyframes stampDown {
+            0% {
+                transform: translate(-50%, -50%) rotate(-20deg) scale(4);
+                opacity: 0;
+            }
+            30% {
+                transform: translate(-50%, -50%) rotate(-10deg) scale(1);
+                opacity: 1;
+            }
+            80% {
+                transform: translate(-50%, -50%) rotate(-5deg) scale(1);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translate(-50%, -50%) rotate(0deg) scale(1);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper" id="gameWrapper">
+        <div class="header">
+            <div class="level-box">📜 第<span id="levelText">1</span>关</div>
+            <div class="found-box">🏆 已破 <span id="foundText">0</span>/<span id="totalText">3</span></div>
+            <div class="hint-box">💡 提示 <span id="hintCount">5</span>次</div>
+        </div>
+
+        <div class="grid-container" id="gridContainer"></div>
+
+        <div class="message-area" id="messageText">👆 按顺序点击汉字组成四字成语</div>
+
+        <div class="btns">
+            <button class="btn" id="hintBtn">💡提示</button>
+            <button class="btn" id="clearBtn">↩清空</button>
+            <button class="btn" id="restartBtn">🔄重来</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ==================== 成语库 ====================
+            const idiomPool = {
+                easy: [
+                    "一心一意", "一马当先", "一鸣惊人", "一箭双雕", "一石二鸟", "一清二楚",
+                    "两全其美", "三心二意", "三言两语", "四海为家", "四通八达",
+                    "五光十色", "五湖四海", "六神无主", "七嘴八舌", "八仙过海", "九牛一毛", "十全十美",
+                    "百发百中", "千山万水", "马到成功", "画龙点睛", "对牛弹琴", "守株待兔",
+                    "亡羊补牢", "井底之蛙", "狐假虎威", "叶公好龙", "刻舟求剑", "掩耳盗铃",
+                    "买椟还珠", "滥竽充数", "愚公移山", "精卫填海"
+                ],
+                medium: [
+                    "卧薪尝胆", "悬梁刺股", "凿壁偷光", "闻鸡起舞", "胸有成竹", "纸上谈兵", "草木皆兵",
+                    "破釜沉舟", "背水一战", "望梅止渴", "乐不思蜀", "入木三分", "曲高和寡", "高山流水",
+                    "四面楚歌", "指鹿为马", "完璧归赵", "负荆请罪", "唇亡齿寒", "朝三暮四",
+                    "班门弄斧", "墨守成规", "鹤立鸡群", "狼狈为奸", "虎头蛇尾", "龙飞凤舞",
+                    "惊弓之鸟", "呆若木鸡", "打草惊蛇", "画蛇添足", "塞翁失马", "杞人忧天"
+                ],
+                hard: [
+                    "罄竹难书", "越俎代庖", "得陇望蜀", "噤若寒蝉", "饮鸩止渴", "暴殄天物", "筚路蓝缕",
+                    "栉风沐雨", "魑魅魍魉", "沆瀣一气", "宵衣旰食", "钟灵毓秀",
+                    "方兴未艾", "纵横捭阖", "弹冠相庆", "炙手可热", "文不加点", "登堂入室",
+                    "沧海桑田", "白云苍狗", "白驹过隙", "昙花一现", "南柯一梦", "黄粱一梦"
+                ]
+            };
+
+            // ==================== 关卡配置 ====================
+            const levelConfig = [
+                { size: 4, idiomCount: 3, easyN: 3, medN: 0, hardN: 0 },
+                { size: 4, idiomCount: 3, easyN: 2, medN: 1, hardN: 0 },
+                { size: 4, idiomCount: 4, easyN: 3, medN: 1, hardN: 0 },
+                { size: 5, idiomCount: 4, easyN: 2, medN: 2, hardN: 0 },
+                { size: 5, idiomCount: 5, easyN: 3, medN: 2, hardN: 0 },
+                { size: 5, idiomCount: 5, easyN: 2, medN: 2, hardN: 1 },
+                { size: 6, idiomCount: 6, easyN: 2, medN: 3, hardN: 1 },
+                { size: 6, idiomCount: 7, easyN: 2, medN: 3, hardN: 2 },
+                { size: 6, idiomCount: 8, easyN: 2, medN: 4, hardN: 2 },
+                { size: 6, idiomCount: 9, easyN: 2, medN: 4, hardN: 3 }
+            ];
+
+            // ==================== 游戏状态 ====================
+            let currentLevel = 1;
+            let gridSize = 4;
+            let grid = [];
+            let usedCells = [];
+            let targetIdioms = [];
+            let foundIdioms = [];
+            let hintsLeft = 5;
+            let gameActive = false;
+            let gameCompleted = false;
+            let selectedCells = [];
+            let hintTargetIdiom = null;
+            let hintRevealCount = 0;
+            let autoAdvanceTimer = null; // 自动跳转计时器
+
+            // DOM
+            const gridContainer = document.getElementById('gridContainer');
+            const levelText = document.getElementById('levelText');
+            const foundText = document.getElementById('foundText');
+            const totalText = document.getElementById('totalText');
+            const messageText = document.getElementById('messageText');
+            const hintBtn = document.getElementById('hintBtn');
+            const hintCountSpan = document.getElementById('hintCount');
+            const clearBtn = document.getElementById('clearBtn');
+            const restartBtn = document.getElementById('restartBtn');
+
+            // ==================== 工具函数 ====================
+            function shuffle(arr) {
+                const a = [...arr];
+                for (let i = a.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [a[i], a[j]] = [a[j], a[i]];
+                }
+                return a;
+            }
+
+            function pickIdioms(easyN, medN, hardN) {
+                let selected = [];
+                selected.push(...shuffle([...idiomPool.easy]).slice(0, easyN));
+                selected.push(...shuffle([...idiomPool.medium]).slice(0, medN));
+                selected.push(...shuffle([...idiomPool.hard]).slice(0, hardN));
+                return shuffle(selected);
+            }
+
+            // ==================== 网格生成 ====================
+            function generateGrid(size, idioms) {
+                const gridArr = Array(size).fill().map(() => Array(size).fill(''));
+                const cellOccupied = Array(size).fill().map(() => Array(size).fill(false));
+
+                function getEmptyPositions() {
+                    const positions = [];
+                    for (let r = 0; r < size; r++) {
+                        for (let c = 0; c < size; c++) {
+                            if (!cellOccupied[r][c]) positions.push({ r, c });
+                        }
+                    }
+                    return shuffle(positions);
+                }
+
+                for (let idiom of idioms) {
+                    const chars = idiom.split('');
+                    const emptyPositions = getEmptyPositions();
+                    if (emptyPositions.length < 4) continue;
+                    const chosenPositions = emptyPositions.slice(0, 4);
+                    for (let i = 0; i < 4; i++) {
+                        const { r, c } = chosenPositions[i];
+                        gridArr[r][c] = chars[i];
+                        cellOccupied[r][c] = true;
+                    }
+                }
+
+                const interference = '之乎者也而何乃其因为所与及若虽然则但天地人和风云雨雪山水火土金木日月星辰'.split('');
+                let interIdx = Math.floor(Math.random() * interference.length);
+                for (let r = 0; r < size; r++) {
+                    for (let c = 0; c < size; c++) {
+                        if (!cellOccupied[r][c]) {
+                            gridArr[r][c] = interference[interIdx % interference.length];
+                            interIdx++;
+                            cellOccupied[r][c] = true;
+                        }
+                    }
+                }
+                return gridArr;
+            }
+
+            // ==================== 提示逻辑 ====================
+            function clearAllHints() {
+                document.querySelectorAll('.cell.hint-glow, .cell.hint-strong').forEach(c => {
+                    c.classList.remove('hint-glow', 'hint-strong');
+                });
+            }
+
+            function getHintTarget() {
+                if (hintTargetIdiom && !foundIdioms.includes(hintTargetIdiom) && targetIdioms.includes(
+                        hintTargetIdiom)) {
+                    return hintTargetIdiom;
+                }
+                const remaining = targetIdioms.filter(id => !foundIdioms.includes(id));
+                if (remaining.length === 0) return null;
+                hintTargetIdiom = remaining[0];
+                hintRevealCount = 0;
+                return hintTargetIdiom;
+            }
+
+            function highlightHintChars(idiom, revealCount) {
+                clearAllHints();
+                const chars = idiom.split('');
+                const cells = document.querySelectorAll('.cell');
+                const highlightCount = Math.min(revealCount, 4);
+                const highlighted = [];
+
+                for (let i = 0; i < highlightCount; i++) {
+                    const targetChar = chars[i];
+                    let found = false;
+                    for (let r = 0; r < gridSize && !found; r++) {
+                        for (let c = 0; c < gridSize && !found; c++) {
+                            if (!usedCells[r][c] && grid[r][c] === targetChar && !highlighted.some(h => h.r === r &&
+                                    h.c === c)) {
+                                highlighted.push({ r, c, charIndex: i });
+                                found = true;
+                            }
+                        }
+                    }
+                }
+
+                cells.forEach(cell => {
+                    const r = parseInt(cell.dataset.row);
+                    const c = parseInt(cell.dataset.col);
+                    const match = highlighted.find(h => h.r === r && h.c === c);
+                    if (match) {
+                        if (match.charIndex === highlightCount - 1 && highlightCount >= 2) {
+                            cell.classList.add('hint-strong');
+                        } else {
+                            cell.classList.add('hint-glow');
+                        }
+                    }
+                });
+
+                setTimeout(() => clearAllHints(), 3000);
+            }
+
+            function useHint() {
+                if (!gameActive || hintsLeft <= 0) return;
+                const idiom = getHintTarget();
+                if (!idiom) {
+                    messageText.textContent = '🎉 所有成语都找到了！';
+                    return;
+                }
+                hintRevealCount++;
+                if (hintRevealCount > 4) {
+                    hintTargetIdiom = null;
+                    const nextIdiom = getHintTarget();
+                    if (!nextIdiom) return;
+                    hintRevealCount = 1;
+                    highlightHintChars(nextIdiom, 1);
+                } else {
+                    highlightHintChars(idiom, hintRevealCount);
+                }
+                hintsLeft--;
+                hintCountSpan.textContent = hintsLeft;
+                const revealed = idiom.substring(0, hintRevealCount);
+                const hidden = '□'.repeat(4 - hintRevealCount);
+                messageText.textContent = `💡 成语提示：${revealed}${hidden}`;
+            }
+
+            function onIdiomFound(idiom) {
+                if (idiom === hintTargetIdiom) {
+                    hintTargetIdiom = null;
+                    hintRevealCount = 0;
+                    clearAllHints();
+                }
+            }
+
+            // ==================== 渲染 ====================
+            function renderGrid() {
+                gridContainer.innerHTML = '';
+                gridContainer.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+                for (let r = 0; r < gridSize; r++) {
+                    for (let c = 0; c < gridSize; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        if (usedCells[r][c]) cell.classList.add('used');
+                        cell.textContent = grid[r][c];
+                        cell.dataset.row = r;
+                        cell.dataset.col = c;
+                        cell.addEventListener('click', () => onCellClick(r, c));
+                        gridContainer.appendChild(cell);
+                    }
+                }
+            }
+
+            function refreshCellStyles() {
+                const cells = document.querySelectorAll('.cell');
+                cells.forEach(cell => {
+                    const r = parseInt(cell.dataset.row);
+                    const c = parseInt(cell.dataset.col);
+                    cell.classList.remove('selected', 'used');
+                    if (usedCells[r][c]) cell.classList.add('used');
+                    if (selectedCells.some(s => s.r === r && s.c === c)) cell.classList.add('selected');
+                });
+            }
+
+            function clearSelection() {
+                selectedCells = [];
+                refreshCellStyles();
+                if (gameActive && !gameCompleted) {
+                    messageText.textContent = '👆 按顺序点击汉字组成四字成语';
+                }
+            }
+
+            // ==================== 点击处理 ====================
+            function onCellClick(r, c) {
+                if (!gameActive || gameCompleted) return;
+                if (usedCells[r][c]) {
+                    messageText.textContent = '🚫 这个字已经被消除了';
+                    return;
+                }
+
+                const alreadyIdx = selectedCells.findIndex(s => s.r === r && s.c === c);
+                if (alreadyIdx >= 0) {
+                    selectedCells.splice(alreadyIdx, 1);
+                    refreshCellStyles();
+                    return;
+                }
+
+                if (selectedCells.length >= 4) {
+                    messageText.textContent = '⚠️ 已选4个字，请先清空或等待判定';
+                    return;
+                }
+
+                selectedCells.push({ r, c, char: grid[r][c] });
+                refreshCellStyles();
+
+                if (selectedCells.length === 4) {
+                    checkIdiom();
+                }
+            }
+
+            function checkIdiom() {
+                const formedWord = selectedCells.map(s => s.char).join('');
+                const coords = selectedCells.map(s => [s.r, s.c]);
+
+                if (!targetIdioms.includes(formedWord)) {
+                    shakeWrongCells();
+                    messageText.textContent = '❌ 不是目标成语，再试试看';
+                    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+                    setTimeout(() => clearSelection(), 500);
+                    return;
+                }
+
+                if (foundIdioms.includes(formedWord)) {
+                    messageText.textContent = '⏳ 这个成语已经找到了';
+                    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+                    setTimeout(() => clearSelection(), 500);
+                    return;
+                }
+
+                // 正确！
+                foundIdioms.push(formedWord);
+                coords.forEach(([rr, cc]) => {
+                    usedCells[rr][cc] = true;
+                });
+                selectedCells = [];
+                refreshCellStyles();
+                updateFoundDisplay();
+                onIdiomFound(formedWord);
+
+                if (navigator.vibrate) navigator.vibrate(20);
+                showStamp();
+
+                // 检查是否全部找到
+                if (foundIdioms.length >= targetIdioms.length) {
+                    levelComplete();
+                } else {
+                    messageText.textContent = `✅ 找到了「${formedWord}」！还剩${targetIdioms.length - foundIdioms.length}个`;
+                }
+            }
+
+            function shakeWrongCells() {
+                const cells = document.querySelectorAll('.cell');
+                selectedCells.forEach(s => {
+                    cells.forEach(cell => {
+                        if (parseInt(cell.dataset.row) === s.r && parseInt(cell.dataset.col) === s.c) {
+                            cell.classList.add('wrong-shake');
+                            setTimeout(() => cell.classList.remove('wrong-shake'), 500);
+                        }
+                    });
+                });
+            }
+
+            function showStamp() {
+                const stamp = document.createElement('div');
+                stamp.className = 'stamp-effect';
+                stamp.textContent = '✓ 破';
+                document.body.appendChild(stamp);
+                setTimeout(() => stamp.remove(), 900);
+            }
+
+            function showBigMessage(text) {
+                const msg = document.createElement('div');
+                msg.className = 'big-message';
+                msg.textContent = text;
+                document.body.appendChild(msg);
+                setTimeout(() => msg.remove(), 1500);
+            }
+
+            function updateFoundDisplay() {
+                foundText.textContent = foundIdioms.length;
+                totalText.textContent = targetIdioms.length;
+            }
+
+            // ==================== 关卡完成 → 自动下一关 ====================
+            function levelComplete() {
+                gameActive = false;
+                gameCompleted = true;
+                clearAllHints();
+                clearTimeout(autoAdvanceTimer);
+
+                if (currentLevel >= 10) {
+                    // 全部通关
+                    messageText.textContent = '🏆 恭喜！你通关了全部10关！文曲星下凡！';
+                    showBigMessage('🏆 全部通关！');
+                } else {
+                    // 显示过关提示，然后自动跳转
+                    messageText.textContent = `🎉 第${currentLevel}关完成！3秒后自动进入下一关...`;
+                    showBigMessage(`第${currentLevel}关 ✓`);
+
+                    // 3秒后自动进入下一关
+                    autoAdvanceTimer = setTimeout(() => {
+                        currentLevel++;
+                        loadLevel(currentLevel);
+                    }, 3000);
+                }
+            }
+
+            // ==================== 关卡加载 ====================
+            function loadLevel(level) {
+                clearTimeout(autoAdvanceTimer);
+                const config = levelConfig[level - 1];
+                gridSize = config.size;
+                hintsLeft = 5;
+                gameActive = true;
+                gameCompleted = false;
+                foundIdioms = [];
+                selectedCells = [];
+                hintTargetIdiom = null;
+                hintRevealCount = 0;
+                clearAllHints();
+
+                levelText.textContent = level;
+                hintCountSpan.textContent = hintsLeft;
+                messageText.textContent = '👆 按顺序点击汉字组成四字成语';
+
+                targetIdioms = pickIdioms(config.easyN, config.medN, config.hardN);
+                grid = generateGrid(gridSize, targetIdioms);
+                usedCells = Array(gridSize).fill().map(() => Array(gridSize).fill(false));
+
+                renderGrid();
+                updateFoundDisplay();
+                totalText.textContent = targetIdioms.length;
+                foundText.textContent = '0';
+            }
+
+            // ==================== 按钮事件 ====================
+            hintBtn.addEventListener('click', useHint);
+            clearBtn.addEventListener('click', clearSelection);
+            restartBtn.addEventListener('click', () => {
+                clearTimeout(autoAdvanceTimer);
+                loadLevel(currentLevel);
+            });
+            gridContainer.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+            // ==================== 启动 ====================
+            loadLevel(1);
+        })();
+    </script>
+</body>
+</html>
