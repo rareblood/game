@@ -298,7 +298,7 @@
         <div class="btns">
             <button class="btn" id="hintBtn">💡提示</button>
             <button class="btn" id="clearBtn">↩清空</button>
-            <button class="btn" id="restartBtn">🔄重来</button>
+            <button class="btn" id="restartBtn">🔄本关重来</button>
         </div>
     </div>
 
@@ -409,15 +409,12 @@
                         ...idiomPool.hard.filter(i => !usedIdiomsGlobal.has(i))
                     ];
                     const extra = shuffle(allAvailable).slice(0, easyN + medN + hardN - selected.length);
-                    // 去重
                     const existingSet = new Set(selected);
                     extra.forEach(i => {
                         if (!existingSet.has(i)) selected.push(i);
                     });
                 }
 
-                console.log(`第${currentLevel}关可用成语池: 简单${easyPicked.length}个, 中等${medPicked.length}个, 困难${hardPicked.length}个`);
-                console.log('已使用过的成语:', [...usedIdiomsGlobal]);
                 return shuffle(selected);
             }
 
@@ -439,10 +436,7 @@
                 for (let idiom of idioms) {
                     const chars = idiom.split('');
                     const emptyPositions = getEmptyPositions();
-                    if (emptyPositions.length < 4) {
-                        console.warn('空间不足，跳过成语:', idiom);
-                        continue;
-                    }
+                    if (emptyPositions.length < 4) continue;
                     const chosenPositions = emptyPositions.slice(0, 4);
                     for (let i = 0; i < 4; i++) {
                         const { r, c } = chosenPositions[i];
@@ -546,10 +540,7 @@
             }
 
             function onIdiomFound(idiom) {
-                // 加入全局已使用集合
                 usedIdiomsGlobal.add(idiom);
-                console.log('成语「' + idiom + '」已加入全局去重池，总计:', usedIdiomsGlobal.size, '个');
-
                 if (idiom === hintTargetIdiom) {
                     hintTargetIdiom = null;
                     hintRevealCount = 0;
@@ -741,23 +732,22 @@
                 updateFoundDisplay();
                 totalText.textContent = targetIdioms.length;
                 foundText.textContent = '0';
-
-                console.log(`=== 第${level}关加载完成 | 目标成语:${targetIdioms.length}个 | 已使用成语总数:${usedIdiomsGlobal.size} ===`);
             }
 
-            // ==================== 重置游戏（清空全局去重池） ====================
-            function resetGame() {
+            // ==================== 本关重来（不清空全局去重池） ====================
+            function restartCurrentLevel() {
                 clearTimeout(autoAdvanceTimer);
-                usedIdiomsGlobal.clear();
-                currentLevel = 1;
-                console.log('游戏重置，已使用成语池已清空');
-                loadLevel(1);
+                // 关键：不跳过关卡，不改变currentLevel，只重新加载当前关
+                // 但需要从全局去重池中移除当前关的成语（因为它们还没被"真正"使用）
+                // 简化处理：直接重新加载当前关，使用全新的成语
+                console.log('重新开始第' + currentLevel + '关，保持已使用成语池');
+                loadLevel(currentLevel);
             }
 
             // ==================== 按钮事件 ====================
             hintBtn.addEventListener('click', useHint);
             clearBtn.addEventListener('click', clearSelection);
-            restartBtn.addEventListener('click', resetGame);
+            restartBtn.addEventListener('click', restartCurrentLevel);
             gridContainer.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 
             // ==================== 启动 ====================
