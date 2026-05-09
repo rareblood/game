@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=yes, viewport-fit=cover">
+    <title>24点 · 抢答对战</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{
+            background:#1a2a1a;min-height:100vh;display:flex;justify-content:center;align-items:center;
+            font-family:'PingFang SC','Microsoft YaHei',sans-serif;padding:8px;
+            touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+        }
+        .game-wrapper{
+            width:100%;max-width:420px;background:rgba(0,0,0,0.85);border-radius:20px;padding:14px 12px 16px;
+            border:1px solid rgba(255,255,255,0.1);display:flex;flex-direction:column;align-items:center;gap:10px;
+        }
+        .top-bar{
+            width:100%;display:flex;justify-content:space-between;align-items:center;color:#fff;font-weight:700;font-size:0.85rem;gap:6px;
+        }
+        .top-bar .info{
+            background:rgba(255,255,255,0.1);padding:6px 12px;border-radius:12px;text-align:center;flex:1;
+        }
+        .top-bar .info .num{font-size:1.3rem;color:#ffd700;}
+        .timer-bar{
+            width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;display:none;
+        }
+        .timer-fill{height:100%;background:#ffd700;border-radius:3px;transition:width 0.1s;}
+        .timer-fill.urgent{background:#ff4444;}
+
+        .cards-area{width:100%;display:flex;flex-direction:column;align-items:center;gap:4px;}
+        .cards-label{color:#aaa;font-size:0.75rem;text-align:center;}
+        .cards-row{
+            display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:10px;
+            background:rgba(0,0,0,0.3);border-radius:14px;min-height:75px;align-items:center;
+        }
+        .card{
+            width:60px;height:82px;background:#fff;border-radius:8px;display:flex;flex-direction:column;
+            align-items:center;justify-content:center;font-size:1.4rem;font-weight:900;color:#1a3a2a;
+            box-shadow:0 3px 8px rgba(0,0,0,0.4);border:2px solid #ddd;
+        }
+        .card.red{color:#c62828;}
+        .card.saved-card{opacity:0.5;border-style:dashed;}
+        .card .suit{font-size:0.5rem;font-weight:normal;}
+
+        .input-area{
+            width:100%;display:none;flex-direction:column;gap:6px;
+            background:rgba(0,0,0,0.5);border-radius:14px;padding:10px;border:1px solid rgba(255,215,0,0.3);
+        }
+        .input-area.show{display:flex;}
+        .input-label{color:#ffd700;font-size:0.85rem;text-align:center;font-weight:700;}
+        .input-row{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;}
+        .expr-input{
+            flex:1;min-width:140px;max-width:200px;padding:14px 16px;border-radius:12px;
+            border:2px solid #ffd700;background:rgba(0,0,0,0.7);color:#fff;font-size:1.4rem;
+            font-weight:700;text-align:center;outline:none;letter-spacing:2px;
+            font-family:'PingFang SC','Microsoft YaHei',monospace;
+        }
+        .expr-input::placeholder{color:#555;font-size:0.9rem;letter-spacing:0;}
+        .ops-row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;}
+        .quick-btn{
+            width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.12);
+            border:2px solid rgba(255,255,255,0.3);color:#fff;font-size:1.1rem;font-weight:700;
+            cursor:pointer;transition:all 0.1s;display:flex;align-items:center;justify-content:center;
+        }
+        .quick-btn:active{background:#ffd700;color:#1a3a2a;border-color:#ffd700;transform:scale(0.85);}
+
+        .result-overlay{
+            position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,0.7);z-index:100;display:none;
+            justify-content:center;align-items:center;flex-direction:column;gap:12px;
+        }
+        .result-overlay.show{display:flex;}
+        .result-box{
+            background:#1a3a2a;border-radius:20px;padding:24px 28px;text-align:center;
+            border:2px solid #ffd700;max-width:320px;
+        }
+        .result-icon{font-size:3rem;}
+        .result-title{font-size:1.4rem;font-weight:900;color:#ffd700;margin:8px 0;}
+        .result-detail{color:#ccc;font-size:0.9rem;line-height:1.5;}
+        .result-countdown{color:#ffd700;font-size:0.85rem;margin-top:8px;}
+
+        .btn-row{display:flex;gap:8px;width:100%;justify-content:center;flex-wrap:wrap;}
+        .btn{
+            padding:12px 20px;border-radius:22px;font-weight:700;font-size:0.9rem;cursor:pointer;
+            border:2px solid rgba(255,255,255,0.3);color:#fff;background:rgba(255,255,255,0.1);transition:all 0.1s;
+        }
+        .btn:active{transform:scale(0.92);}
+        .btn.buzz-btn{
+            background:#e74c3c;border-color:#ff6b6b;font-size:1.3rem;padding:16px 40px;
+            animation:buzzPulse 1s infinite;width:100%;text-align:center;
+        }
+        .btn.buzz-btn:disabled{background:#555;border-color:#666;animation:none;opacity:0.5;}
+        @keyframes buzzPulse{0%,100%{box-shadow:0 0 10px rgba(255,0,0,0.5);}50%{box-shadow:0 0 30px rgba(255,0,0,0.9);}}
+        .btn.submit-btn{background:#4caf50;border-color:#66bb6a;display:none;}
+        .btn.submit-btn.show{display:inline-block;}
+        .message{color:#ffd700;font-weight:700;text-align:center;font-size:0.85rem;min-height:20px;}
+    </style>
+</head>
+<body>
+<div class="game-wrapper">
+    <div class="top-bar">
+        <div class="info">🙋 我<br><span class="num" id="myCount">20</span>张</div>
+        <div class="info" id="savedInfo" style="display:none;">💾 留存<br><span class="num" id="savedCount">0</span>张</div>
+        <div class="info">🤖 AI<br><span class="num" id="aiCount">20</span>张</div>
+    </div>
+
+    <div class="timer-bar" id="timerBar"><div class="timer-fill" id="timerFill"></div></div>
+    <div class="message" id="messageText">🔔 3秒后开始</div>
+
+    <div class="cards-area">
+        <div class="cards-label">🃏 桌面牌</div>
+        <div class="cards-row" id="cardsRow"></div>
+    </div>
+
+    <div class="input-area" id="inputArea">
+        <div class="input-label">最后一步：哪2个数算出24？</div>
+        <div class="input-row">
+            <input type="text" class="expr-input" id="exprInput" placeholder="如 6×4" autocomplete="off" maxlength="20" inputmode="numeric">
+        </div>
+        <div class="ops-row">
+            <button class="quick-btn" data-op="+">+</button>
+            <button class="quick-btn" data-op="-">−</button>
+            <button class="quick-btn" data-op="*">×</button>
+            <button class="quick-btn" data-op="/">÷</button>
+        </div>
+    </div>
+
+    <div class="btn-row">
+        <button class="btn buzz-btn" id="buzzBtn">🔔 抢答</button>
+        <button class="btn submit-btn" id="submitBtn">✅ 提交</button>
+        <button class="btn" id="resetBtn">🔄 新局</button>
+    </div>
+</div>
+
+<div class="result-overlay" id="resultOverlay">
+    <div class="result-box">
+        <div class="result-icon" id="resultIcon"></div>
+        <div class="result-title" id="resultTitle"></div>
+        <div class="result-detail" id="resultDetail"></div>
+        <div class="result-countdown" id="resultCountdown"></div>
+    </div>
+</div>
+
+<script>
+(function(){
+    const TARGET=24, ANSWER_TIME=25, PREPARE_TIME=3, RESULT_DELAY=2;
+    let playerHand=[], aiHand=[], poolCards=[], savedCards=[];
+    let gameActive=false, buzzing=false, buzzer=null, preparing=false;
+    let timerInterval=null, timeLeft=ANSWER_TIME, aiTimeout=null;
+
+    const cardsRow=document.getElementById('cardsRow');
+    const messageText=document.getElementById('messageText');
+    const timerBar=document.getElementById('timerBar');
+    const timerFill=document.getElementById('timerFill');
+    const buzzBtn=document.getElementById('buzzBtn');
+    const submitBtn=document.getElementById('submitBtn');
+    const inputArea=document.getElementById('inputArea');
+    const exprInput=document.getElementById('exprInput');
+    const myCount=document.getElementById('myCount');
+    const aiCount=document.getElementById('aiCount');
+    const savedCount=document.getElementById('savedCount');
+    const savedInfo=document.getElementById('savedInfo');
+    const resultOverlay=document.getElementById('resultOverlay');
+    const resultIcon=document.getElementById('resultIcon');
+    const resultTitle=document.getElementById('resultTitle');
+    const resultDetail=document.getElementById('resultDetail');
+    const resultCountdown=document.getElementById('resultCountdown');
+
+    function createDeck(){const suits=['♠','♥','♦','♣'],deck=[];for(let s of suits)for(let v=1;v<=10;v++)deck.push({suit:s,value:v});return shuffle(deck);}
+    function getDisplay(v){return v===1?'A':v.toString();}
+    function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+    function getAllCards(){return [...poolCards,...savedCards];}
+    function stopAllTimers(){clearTimeout(aiTimeout);clearInterval(timerInterval);}
+
+    function initGame(){
+        stopAllTimers();resultOverlay.classList.remove('show');
+        const deck=createDeck(),mid=Math.floor(deck.length/2);
+        playerHand=deck.slice(0,mid);aiHand=deck.slice(mid);
+        poolCards=[];savedCards=[];gameActive=false;buzzing=false;buzzer=null;preparing=true;
+        timerBar.style.display='none';inputArea.classList.remove('show');submitBtn.classList.remove('show');
+        buzzBtn.disabled=true;buzzBtn.textContent='🔔 准备中';
+        messageText.textContent='🔔 3秒后开始新一局';
+        updateAll();
+        showCountdown(PREPARE_TIME,()=>{
+            preparing=false;gameActive=true;
+            dealNewRound();updateAll();
+            buzzBtn.disabled=false;buzzBtn.textContent='🔔 抢答';
+            messageText.textContent='⚡ 点击红色按钮抢答！';
+            startAiTimer();
+        });
+    }
+
+    function showCountdown(seconds,callback){
+        let count=seconds;
+        const el=document.createElement('div');
+        el.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:6rem;font-weight:900;color:#ffd700;z-index:100;pointer-events:none;text-shadow:0 0 40px rgba(255,215,0,0.8);';
+        el.textContent=count;document.body.appendChild(el);
+        const iv=setInterval(()=>{count--;if(count<=0){clearInterval(iv);el.remove();if(callback)callback();return;}el.textContent=count;},1000);
+    }
+
+    function dealNewRound(){
+        poolCards=[];
+        for(let i=0;i<2;i++){if(playerHand.length>0)poolCards.push(playerHand.splice(Math.floor(Math.random()*playerHand.length),1)[0]);}
+        for(let i=0;i<2;i++){if(aiHand.length>0)poolCards.push(aiHand.splice(Math.floor(Math.random()*aiHand.length),1)[0]);}
+        while(poolCards.length<4&&savedCards.length>0)poolCards.push(savedCards.pop());
+        while(poolCards.length<4&&playerHand.length>0)poolCards.push(playerHand.pop());
+        while(poolCards.length<4&&aiHand.length>0)poolCards.push(aiHand.pop());
+        buzzing=false;buzzer=null;preparing=false;
+        stopAllTimers();timerBar.style.display='none';inputArea.classList.remove('show');submitBtn.classList.remove('show');
+        buzzBtn.disabled=false;buzzBtn.textContent='🔔 抢答';exprInput.value='';
+    }
+
+    function renderCards(){
+        cardsRow.innerHTML='';
+        const all=getAllCards();
+        if(all.length===0){cardsRow.innerHTML='<span style="color:#666;">无牌</span>';return;}
+        all.forEach(card=>{
+            const div=document.createElement('div');
+            div.className='card';
+            if(['♥','♦'].includes(card.suit))div.classList.add('red');
+            if(card._saved)div.classList.add('saved-card');
+            div.innerHTML=`${getDisplay(card.value)}<span class="suit">${card.suit}</span>`;
+            cardsRow.appendChild(div);
+        });
+    }
+
+    function updateAll(){renderCards();myCount.textContent=playerHand.length;aiCount.textContent=aiHand.length;savedCount.textContent=savedCards.length;savedInfo.style.display=savedCards.length>0?'block':'none';}
+
+    // ==================== 分组验证 ====================
+    function getAllSubsets(arr){
+        const subsets=[];
+        for(let mask=1;mask<(1<<arr.length)-1;mask++){
+            const gA=[],gB=[];
+            for(let i=0;i<arr.length;i++){if(mask&(1<<i))gA.push(arr[i]);else gB.push(arr[i]);}
+            subsets.push({groupA:gA,groupB:gB});
+        }
+        return subsets;
+    }
+    function canCompute(nums,target){
+        if(nums.length===0)return false;
+        if(nums.length===1)return nums[0]===target;
+        const perms=getUniquePerms(nums);
+        for(let perm of perms){
+            for(let i=1;i<perm.length;i++){
+                const left=perm.slice(0,i),right=perm.slice(i);
+                for(let lr of allResults(left))for(let rr of allResults(right)){
+                    if(Math.abs(lr+rr-target)<0.0001)return true;
+                    if(Math.abs(lr-rr-target)<0.0001)return true;
+                    if(Math.abs(lr*rr-target)<0.0001)return true;
+                    if(rr!==0&&Math.abs(lr/rr-target)<0.0001)return true;
+                }
+            }
+        }
+        return false;
+    }
+    function allResults(nums){
+        if(nums.length===1)return[nums[0]];
+        const results=new Set();
+        const perms=getUniquePerms(nums);
+        for(let perm of perms){
+            for(let i=1;i<perm.length;i++){
+                const left=perm.slice(0,i),right=perm.slice(i);
+                for(let lr of allResults(left))for(let rr of allResults(right)){
+                    results.add(lr+rr);results.add(lr-rr);results.add(lr*rr);if(rr!==0)results.add(lr/rr);
+                }
+            }
+        }
+        return [...results];
+    }
+    function getUniquePerms(arr){
+        if(arr.length<=1)return[arr];
+        const result=[],seen=new Set();
+        for(let i=0;i<arr.length;i++){
+            const rest=[...arr.slice(0,i),...arr.slice(i+1)];
+            for(let p of getUniquePerms(rest)){const key=[arr[i],...p].join(',');if(!seen.has(key)){seen.add(key);result.push([arr[i],...p]);}}
+        }
+        return result;
+    }
+
+    function validateEquation(expr){
+        expr=expr.replace(/\s/g,'').replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/X/g,'*').replace(/x/g,'*');
+        if(!/^[\d+\-*/().]+$/.test(expr))return {valid:false,msg:'包含非法字符'};
+        const match=expr.match(/^(\d+)\s*([+\-*/])\s*(\d+)$/);
+        if(!match)return {valid:false,msg:'格式：数字+运算符+数字（如 6×4）'};
+        const a=parseInt(match[1]),op=match[2],b=parseInt(match[3]);
+        let result;
+        if(op==='/'&&b===0)return {valid:false,msg:'不能除以0'};
+        switch(op){case'+':result=a+b;break;case'-':result=a-b;break;case'*':result=a*b;break;case'/':result=a/b;break;}
+        if(Math.abs(result-TARGET)>0.0001)return {valid:false,msg:`${a}${op}${b}=${result}，不等于24`};
+        const values=getAllCards().map(c=>c.value);
+        const subsets=getAllSubsets(values);
+        for(let {groupA,groupB} of subsets){
+            if(canCompute(groupA,a)&&canCompute(groupB,b))return {valid:true,detail:`${groupA.join(',')}→${a}，${groupB.join(',')}→${b}`};
+            if(canCompute(groupA,b)&&canCompute(groupB,a))return {valid:true,detail:`${groupA.join(',')}→${b}，${groupB.join(',')}→${a}`};
+        }
+        return {valid:false,msg:`桌面牌无法组合出${a}和${b}`};
+    }
+
+    // ==================== 结果弹窗 ====================
+    function showResult(icon,title,detail,callback){
+        resultIcon.textContent=icon;resultTitle.textContent=title;resultDetail.textContent=detail;
+        resultCountdown.textContent=`${RESULT_DELAY}秒后继续...`;resultOverlay.classList.add('show');
+        let count=RESULT_DELAY;
+        const iv=setInterval(()=>{count--;resultCountdown.textContent=`${count}秒后继续...`;if(count<=0){clearInterval(iv);resultOverlay.classList.remove('show');if(callback)callback();}},1000);
+    }
+
+    // ==================== 提交 ====================
+    function submitAnswer(){
+        const expr=exprInput.value.trim();
+        if(!expr){messageText.textContent='请输入算式';return;}
+        const validation=validateEquation(expr);
+        if(!validation.valid){messageText.textContent='❌ '+validation.msg;if(navigator.vibrate)navigator.vibrate([30,50,30]);return;}
+        stopAllTimers();timerBar.style.display='none';inputArea.classList.remove('show');submitBtn.classList.remove('show');
+        buzzing=false;buzzer=null;
+        showResult('✅','答对了！',`${expr}=24\n${validation.detail}\n牌归AI（你出牌成功）`,()=>{
+            aiHand.push(...poolCards,...savedCards);poolCards=[];savedCards=[];
+            exprInput.value='';updateAll();if(checkEnd())return;startNewRound();
+        });
+    }
+    function playerTimeout(){
+        stopAllTimers();timerBar.style.display='none';inputArea.classList.remove('show');submitBtn.classList.remove('show');
+        buzzing=false;buzzer=null;
+        showResult('⏰','超时了！','牌归你（惩罚）',()=>{
+            playerHand.push(...poolCards,...savedCards);poolCards=[];savedCards=[];
+            exprInput.value='';updateAll();if(checkEnd())return;startNewRound();
+        });
+    }
+    function aiCorrect(){
+        stopAllTimers();timerBar.style.display='none';inputArea.classList.remove('show');submitBtn.classList.remove('show');
+        buzzing=false;buzzer=null;
+        showResult('🤖','AI答对了！','桌面牌归你',()=>{
+            playerHand.push(...poolCards,...savedCards);poolCards=[];savedCards=[];
+            exprInput.value='';updateAll();if(checkEnd())return;startNewRound();
+        });
+    }
+    function aiWrong(){
+        stopAllTimers();timerBar.style.display='none';inputArea.classList.remove('show');submitBtn.classList.remove('show');
+        buzzing=false;buzzer=null;
+        showResult('🤖','AI答不出！','牌留存桌面',()=>{
+            savedCards.push(...poolCards);poolCards=[];
+            savedCards.forEach(c=>c._saved=true);
+            exprInput.value='';updateAll();if(checkEnd())return;startNewRound();
+        });
+    }
+
+    function startNewRound(){
+        gameActive=false;preparing=true;
+        buzzBtn.disabled=true;buzzBtn.textContent='⏳ 准备中';
+        stopAllTimers();timerBar.style.display='none';inputArea.classList.remove('show');submitBtn.classList.remove('show');
+        exprInput.value='';resultOverlay.classList.remove('show');
+        showCountdown(PREPARE_TIME,()=>{
+            preparing=false;gameActive=true;
+            dealNewRound();updateAll();
+            buzzBtn.disabled=false;buzzBtn.textContent='🔔 抢答';
+            messageText.textContent='⚡ 点击红色按钮抢答！';
+            startAiTimer();
+        });
+    }
+
+    // ============ 抢答 ============
+    buzzBtn.addEventListener('click',()=>{if(!gameActive||buzzing||preparing)return;playerBuzz();});
+    function playerBuzz(){
+        buzzing=true;buzzer='player';timeLeft=ANSWER_TIME;
+        stopAllTimers();
+        buzzBtn.disabled=true;buzzBtn.textContent=`⏳ ${ANSWER_TIME}秒`;
+        timerBar.style.display='block';timerFill.style.width='100%';timerFill.classList.remove('urgent');
+        inputArea.classList.add('show');submitBtn.classList.add('show');
+        messageText.textContent='最后一步：哪2个数算出24？';
+        exprInput.value='';exprInput.focus();
+        updateAll();startTimer();
+    }
+
+    document.querySelectorAll('.quick-btn').forEach(btn=>{
+        btn.addEventListener('click',()=>{if(buzzer!=='player')return;exprInput.value+=btn.dataset.op;exprInput.focus();});
+    });
+    submitBtn.addEventListener('click',submitAnswer);
+    exprInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submitAnswer();}});
+
+    function startTimer(){
+        stopAllTimers();timeLeft=ANSWER_TIME;
+        timerInterval=setInterval(()=>{
+            timeLeft-=0.1;
+            timerFill.style.width=Math.max(0,timeLeft/ANSWER_TIME*100)+'%';
+            if(timeLeft<=8)timerFill.classList.add('urgent');
+            buzzBtn.textContent=`⏳ ${Math.ceil(timeLeft)}秒`;
+            if(timeLeft<=0){if(buzzer==='player')playerTimeout();else if(buzzer==='ai')aiWrong();}
+        },100);
+    }
+
+    // ============ AI ============
+    function startAiTimer(){if(!gameActive||preparing)return;const delay=1500+Math.random()*3000;aiTimeout=setTimeout(()=>aiBuzz(),delay);}
+    function aiBuzz(){
+        if(!gameActive||buzzing||preparing)return;
+        buzzing=true;buzzer='ai';timeLeft=ANSWER_TIME;
+        stopAllTimers();inputArea.classList.remove('show');submitBtn.classList.remove('show');
+        buzzBtn.disabled=true;buzzBtn.textContent='🤖 AI计算中...';
+        timerBar.style.display='block';timerFill.style.width='100%';timerFill.classList.remove('urgent');
+        messageText.textContent='🤖 AI在计算...';updateAll();startTimer();
+        const allVals=getAllCards().map(c=>c.value);
+        const solvable=findAny24Solution(allVals);
+        const delay=1000+Math.random()*2000;
+        setTimeout(()=>{if(buzzing&&buzzer==='ai'){if(solvable)aiCorrect();else aiWrong();}},Math.min(delay,ANSWER_TIME*1000-500));
+    }
+
+    function findAny24Solution(values){
+        const ops=['+','-','*','/'],perms=uniquePerms(values);
+        for(let[a,b,c,d]of perms){for(let o1 of ops)for(let o2 of ops)for(let o3 of ops){
+            const calc=(x,o,y)=>{if(o==='/'&&y===0)return null;switch(o){case'+':return x+y;case'-':return x-y;case'*':return x*y;case'/':return x/y;}};
+            const r1=calc(a,o1,b);if(r1===null)continue;const r2=calc(r1,o2,c);if(r2===null)continue;const r3=calc(r2,o3,d);if(r3!==null&&Math.abs(r3-24)<0.0001)return true;
+            const s1=calc(a,o1,b);if(s1===null)continue;const s2=calc(c,o3,d);if(s2===null)continue;const s3=calc(s1,o2,s2);if(s3!==null&&Math.abs(s3-24)<0.0001)return true;
+        }}return false;
+    }
+    function uniquePerms(a){if(a.length<=1)return[a];const r=[],seen=new Set();for(let i=0;i<a.length;i++){const rest=[...a.slice(0,i),...a.slice(i+1)];for(let p of uniquePerms(rest)){const k=[a[i],...p].join(',');if(!seen.has(k)){seen.add(k);r.push([a[i],...p]);}}}return r;}
+
+    function checkEnd(){
+        updateAll();
+        if(playerHand.length===0&&poolCards.length===0&&savedCards.length===0){
+            gameActive=false;preparing=false;stopAllTimers();timerBar.style.display='none';inputArea.classList.remove('show');submitBtn.classList.remove('show');
+            showResult('🏆','恭喜！','你率先出完了所有牌！\n胜利！',()=>{});
+            buzzBtn.disabled=true;buzzBtn.textContent='🏆 你赢了';return true;
+        }
+        if(aiHand.length===0&&poolCards.length===0&&savedCards.length===0){
+            gameActive=false;preparing=false;stopAllTimers();timerBar.style.display='none';inputArea.classList.remove('show');submitBtn.classList.remove('show');
+            showResult('💀','AI赢了','AI率先出完了牌\n下次加油！',()=>{});
+            buzzBtn.disabled=true;buzzBtn.textContent='💀 AI赢了';return true;
+        }
+        return false;
+    }
+
+    document.getElementById('resetBtn').addEventListener('click',initGame);
+    initGame();
+})();
+</script>
+</body>
+</html>
