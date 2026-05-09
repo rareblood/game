@@ -219,15 +219,6 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             background: #dac29e;
         }
-        .btn.primary {
-            background: #c28b5e;
-            color: #fff;
-            border-color: #855e3a;
-        }
-        .btn:disabled {
-            opacity: 0.45;
-            pointer-events: none;
-        }
         .big-message {
             position: fixed;
             top: 35%;
@@ -321,22 +312,29 @@
                     "五光十色", "五湖四海", "六神无主", "七嘴八舌", "八仙过海", "九牛一毛", "十全十美",
                     "百发百中", "千山万水", "马到成功", "画龙点睛", "对牛弹琴", "守株待兔",
                     "亡羊补牢", "井底之蛙", "狐假虎威", "叶公好龙", "刻舟求剑", "掩耳盗铃",
-                    "买椟还珠", "滥竽充数", "愚公移山", "精卫填海"
+                    "买椟还珠", "滥竽充数", "愚公移山", "精卫填海", "夸父追日", "女娲补天",
+                    "后羿射日", "嫦娥奔月", "牛郎织女", "开天辟地", "鹏程万里", "百花齐放"
                 ],
                 medium: [
                     "卧薪尝胆", "悬梁刺股", "凿壁偷光", "闻鸡起舞", "胸有成竹", "纸上谈兵", "草木皆兵",
                     "破釜沉舟", "背水一战", "望梅止渴", "乐不思蜀", "入木三分", "曲高和寡", "高山流水",
-                    "四面楚歌", "指鹿为马", "完璧归赵", "负荆请罪", "唇亡齿寒", "朝三暮四",
-                    "班门弄斧", "墨守成规", "鹤立鸡群", "狼狈为奸", "虎头蛇尾", "龙飞凤舞",
-                    "惊弓之鸟", "呆若木鸡", "打草惊蛇", "画蛇添足", "塞翁失马", "杞人忧天"
+                    "阳春白雪", "四面楚歌", "指鹿为马", "完璧归赵", "负荆请罪", "唇亡齿寒", "朝三暮四",
+                    "班门弄斧", "墨守成规", "鹤立鸡群", "鸡犬升天", "狼狈为奸", "虎头蛇尾", "龙飞凤舞",
+                    "凤毛麟角", "惊弓之鸟", "呆若木鸡", "打草惊蛇", "画蛇添足", "杯弓蛇影", "螳臂当车",
+                    "塞翁失马", "杞人忧天", "邯郸学步", "东施效颦", "缘木求鱼", "南辕北辙", "黔驴技穷"
                 ],
                 hard: [
                     "罄竹难书", "越俎代庖", "得陇望蜀", "噤若寒蝉", "饮鸩止渴", "暴殄天物", "筚路蓝缕",
-                    "栉风沐雨", "魑魅魍魉", "沆瀣一气", "宵衣旰食", "钟灵毓秀",
-                    "方兴未艾", "纵横捭阖", "弹冠相庆", "炙手可热", "文不加点", "登堂入室",
-                    "沧海桑田", "白云苍狗", "白驹过隙", "昙花一现", "南柯一梦", "黄粱一梦"
+                    "栉风沐雨", "兄弟阋墙", "魑魅魍魉", "沆瀣一气", "宵衣旰食", "钟灵毓秀", "吉光片羽",
+                    "方兴未艾", "纵横捭阖", "弹冠相庆", "炙手可热", "文不加点", "目无全牛", "登堂入室",
+                    "羚羊挂角", "雪泥鸿爪", "沧海桑田", "白云苍狗", "白驹过隙", "昙花一现", "电光石火",
+                    "浮光掠影", "南柯一梦", "黄粱一梦", "东窗事发", "请君入瓮", "口蜜腹剑", "笑里藏刀",
+                    "暗度陈仓", "指桑骂槐", "釜底抽薪"
                 ]
             };
+
+            // 全局已使用成语集合（跨关卡不重复）
+            let usedIdiomsGlobal = new Set();
 
             // ==================== 关卡配置 ====================
             const levelConfig = [
@@ -365,7 +363,7 @@
             let selectedCells = [];
             let hintTargetIdiom = null;
             let hintRevealCount = 0;
-            let autoAdvanceTimer = null; // 自动跳转计时器
+            let autoAdvanceTimer = null;
 
             // DOM
             const gridContainer = document.getElementById('gridContainer');
@@ -388,11 +386,38 @@
                 return a;
             }
 
+            // 获取可用成语（排除已使用过的）
+            function getAvailableIdioms(pool, count) {
+                const available = pool.filter(idiom => !usedIdiomsGlobal.has(idiom));
+                const shuffled = shuffle(available);
+                return shuffled.slice(0, count);
+            }
+
             function pickIdioms(easyN, medN, hardN) {
                 let selected = [];
-                selected.push(...shuffle([...idiomPool.easy]).slice(0, easyN));
-                selected.push(...shuffle([...idiomPool.medium]).slice(0, medN));
-                selected.push(...shuffle([...idiomPool.hard]).slice(0, hardN));
+                const easyPicked = getAvailableIdioms(idiomPool.easy, easyN);
+                const medPicked = getAvailableIdioms(idiomPool.medium, medN);
+                const hardPicked = getAvailableIdioms(idiomPool.hard, hardN);
+
+                selected.push(...easyPicked, ...medPicked, ...hardPicked);
+
+                // 如果可用成语不够，填充其他难度
+                if (selected.length < easyN + medN + hardN) {
+                    const allAvailable = [
+                        ...idiomPool.easy.filter(i => !usedIdiomsGlobal.has(i)),
+                        ...idiomPool.medium.filter(i => !usedIdiomsGlobal.has(i)),
+                        ...idiomPool.hard.filter(i => !usedIdiomsGlobal.has(i))
+                    ];
+                    const extra = shuffle(allAvailable).slice(0, easyN + medN + hardN - selected.length);
+                    // 去重
+                    const existingSet = new Set(selected);
+                    extra.forEach(i => {
+                        if (!existingSet.has(i)) selected.push(i);
+                    });
+                }
+
+                console.log(`第${currentLevel}关可用成语池: 简单${easyPicked.length}个, 中等${medPicked.length}个, 困难${hardPicked.length}个`);
+                console.log('已使用过的成语:', [...usedIdiomsGlobal]);
                 return shuffle(selected);
             }
 
@@ -414,7 +439,10 @@
                 for (let idiom of idioms) {
                     const chars = idiom.split('');
                     const emptyPositions = getEmptyPositions();
-                    if (emptyPositions.length < 4) continue;
+                    if (emptyPositions.length < 4) {
+                        console.warn('空间不足，跳过成语:', idiom);
+                        continue;
+                    }
                     const chosenPositions = emptyPositions.slice(0, 4);
                     for (let i = 0; i < 4; i++) {
                         const { r, c } = chosenPositions[i];
@@ -518,6 +546,10 @@
             }
 
             function onIdiomFound(idiom) {
+                // 加入全局已使用集合
+                usedIdiomsGlobal.add(idiom);
+                console.log('成语「' + idiom + '」已加入全局去重池，总计:', usedIdiomsGlobal.size, '个');
+
                 if (idiom === hintTargetIdiom) {
                     hintTargetIdiom = null;
                     hintRevealCount = 0;
@@ -622,7 +654,6 @@
                 if (navigator.vibrate) navigator.vibrate(20);
                 showStamp();
 
-                // 检查是否全部找到
                 if (foundIdioms.length >= targetIdioms.length) {
                     levelComplete();
                 } else {
@@ -671,15 +702,12 @@
                 clearTimeout(autoAdvanceTimer);
 
                 if (currentLevel >= 10) {
-                    // 全部通关
                     messageText.textContent = '🏆 恭喜！你通关了全部10关！文曲星下凡！';
                     showBigMessage('🏆 全部通关！');
                 } else {
-                    // 显示过关提示，然后自动跳转
                     messageText.textContent = `🎉 第${currentLevel}关完成！3秒后自动进入下一关...`;
                     showBigMessage(`第${currentLevel}关 ✓`);
 
-                    // 3秒后自动进入下一关
                     autoAdvanceTimer = setTimeout(() => {
                         currentLevel++;
                         loadLevel(currentLevel);
@@ -713,15 +741,23 @@
                 updateFoundDisplay();
                 totalText.textContent = targetIdioms.length;
                 foundText.textContent = '0';
+
+                console.log(`=== 第${level}关加载完成 | 目标成语:${targetIdioms.length}个 | 已使用成语总数:${usedIdiomsGlobal.size} ===`);
+            }
+
+            // ==================== 重置游戏（清空全局去重池） ====================
+            function resetGame() {
+                clearTimeout(autoAdvanceTimer);
+                usedIdiomsGlobal.clear();
+                currentLevel = 1;
+                console.log('游戏重置，已使用成语池已清空');
+                loadLevel(1);
             }
 
             // ==================== 按钮事件 ====================
             hintBtn.addEventListener('click', useHint);
             clearBtn.addEventListener('click', clearSelection);
-            restartBtn.addEventListener('click', () => {
-                clearTimeout(autoAdvanceTimer);
-                loadLevel(currentLevel);
-            });
+            restartBtn.addEventListener('click', resetGame);
             gridContainer.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 
             // ==================== 启动 ====================
